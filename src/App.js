@@ -17,6 +17,16 @@ class App extends Component {
       storage.save("elems", [])
     }
 
+    // Patch so versions without elem ids work
+    let elems = storage.load("elems");
+    if (elems.length && !elems[0].id) {
+      elems = elems.map(e => {
+        e.id = Math.floor(Math.random() * 100000000).toString();
+        return e;
+      })
+      storage.save("elems", elems);
+    }
+
     this.onDragEnd = this.onDragEnd.bind(this);
     this.onDragStart = this.onDragStart.bind(this);
 
