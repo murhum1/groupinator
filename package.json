@@ -1,7 +1,7 @@
 {
-  "name": "randomizer",
+  "name": "groupinator",
   "version": "0.1.0",
-  "homepage": "~murhum1/randomizer/build/",
+  "homepage": "~murhum1/groupinator/build/",
   "private": true,
   "dependencies": {
     "@testing-library/jest-dom": "^4.2.4",
