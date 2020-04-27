@@ -11,3 +11,23 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+#groups .group {
+	display: flex;
+	padding-left:12px;
+}
+
+.group-element {
+	border: 1px solid rgba(0,0,0,.25);
+	border-radius: 4px;
+	padding:0px 8px;
+	margin-right:6px;
+	background-color: white;
+}
+
+#groups .new-group-area {
+	height:50px;
+	display:flex;
+	justify-content:center;
+	color: rgba(0, 0, 0, 0.4);
+}
