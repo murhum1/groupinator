@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import './App.css';
 import storage from './utils'
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { InputGroup, Form, Container, Row, Col, ListGroup, Button, DropdownButton, Dropdown, ButtonGroup } from 'react-bootstrap';
+import { InputGroup, Form, Container, Row, Col, ListGroup, Button, Dropdown } from 'react-bootstrap';
 import { DragDropContext } from 'react-beautiful-dnd';
 import Group from './Group'
 import NewGroup from './NewGroup'
@@ -35,8 +35,8 @@ class App extends Component {
     if (!sets) {
       storage.save("sets", [
         {
-          "name": "Set 1",
-          "description": "Set 1 description",
+          "name": "Default set",
+          "description": "Default set description",
           "elems": elems || []
         }
       ]);
@@ -186,7 +186,8 @@ class App extends Component {
 
   selectSet = idx => {
     this.setState({
-      setIdx: idx
+      setIdx: idx,
+      groups: []
     });
     storage.save("setIdx", idx);
   }
@@ -202,17 +203,19 @@ class App extends Component {
     const { sets, setIdx, setsModalShown, creatingNewSet } = {...this.state}
     return (<Container fluid>
       <Row style={{padding: "10px 15px", flexAlign: "end"}}>
-        <Dropdown as={ButtonGroup} style={{marginRight: "15px"}}>
-          <DropdownButton title={this.getSet().name}>
-          {
-            sets.map((s, idx) => (
-              <Dropdown.Item onSelect={() => this.selectSet(idx)} key={idx}>{s.name}</Dropdown.Item>
-            ))
-          }
-          </DropdownButton>
-          <Button onClick={this.onCreateNewSet} style={{fontWeight: "bold"}} variant="outline-primary">+</Button>
+        <Dropdown>
+          <Dropdown.Toggle style={{minWidth: "150px"}}>{this.getSet().name}</Dropdown.Toggle>
+          <Dropdown.Menu>
+            {
+              sets.map((s, idx) => (
+                <Dropdown.Item active={idx === setIdx} onSelect={() => this.selectSet(idx)} key={idx}>{s.name}</Dropdown.Item>
+              ))
+            }
+            <Dropdown.Divider />
+            <Dropdown.Item onSelect={this.onCreateNewSet} style={{fontWeight: "bold"}} variant="outline-primary">+ New set</Dropdown.Item>
+          </Dropdown.Menu>
         </Dropdown>
-        <div>
+        <div style={{marginLeft: "15px"}}>
           <Button size="sm" variant="outline-primary" onClick={this.showSetsModal}>Manage sets</Button>
         </div>
       </Row>
