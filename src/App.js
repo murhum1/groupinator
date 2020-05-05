@@ -2,24 +2,23 @@ import React, { Component } from 'react';
 import './App.css';
 import storage from './utils'
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { InputGroup, Form, Container, Row, Col, ListGroup, Button } from 'react-bootstrap';
+import { InputGroup, Form, Container, Row, Col, ListGroup, Button, DropdownButton, Dropdown, ButtonGroup } from 'react-bootstrap';
 import { DragDropContext } from 'react-beautiful-dnd';
 import Group from './Group'
 import NewGroup from './NewGroup'
 import CopyToClipboardButton from './CopyToClipboardButton'
+import SetsModal from './SetsModal'
 
 class App extends Component {
 
   constructor(props) {
     super(props);
 
-    if (!storage.load("elems")) {
-      storage.save("elems", [])
-    }
+    let elems = storage.load("elems"); // Legacy
+    const sets = storage.load("sets");
 
     // Patch so versions without elem ids work
-    let elems = storage.load("elems");
-    if (elems.length && !elems[0].id) {
+    if (elems && elems.length && !elems[0].id) {
       elems = elems.map(e => {
         e.id = Math.floor(Math.random() * 100000000).toString();
         return e;
@@ -27,16 +26,39 @@ class App extends Component {
       storage.save("elems", elems);
     }
 
+    // Patch so versions without multiple sets work
+    if (elems) {
+      storage.save("elemsBackup", storage.load("elems"));
+      storage.delete("elems");
+    }
+    // Initialize sets if none found from localstorage, e.g. this is first load
+    if (!sets) {
+      storage.save("sets", [
+        {
+          "name": "Set 1",
+          "description": "Set 1 description",
+          "elems": elems || []
+        }
+      ]);
+      storage.save("setIdx", 0);
+    }
+
+
     this.onDragEnd = this.onDragEnd.bind(this);
     this.onDragStart = this.onDragStart.bind(this);
 
     this.state = {
-      elems: storage.load("elems"),
+      sets: storage.load("sets"),
+      setIdx: storage.load("setIdx"),
       input: "",
       groupSize: 3,
       groups: [],
       dragging: false
     }
+  }
+
+  getSet = () => {
+    return this.state.sets[this.state.setIdx]
   }
 
   handleChange = e => {
@@ -46,32 +68,32 @@ class App extends Component {
   }
 
   addElem = () => {
-    const elems = this.state.elems;
+    const elems = this.getSet().elems;
     elems.push({ id: new Date().getTime().toString(), label: this.state.input, selected: true })
     this.setState({
-      elems: elems,
+      sets: this.state.sets,
       input: ""
-    })
-    storage.save("elems", elems);
+    });
+    storage.save("sets", this.state.sets);
   }
 
   removeElem = (ev, idx) => {
     ev.stopPropagation();
-    let elems = this.state.elems;
+    let elems = this.getSet().elems;
     elems.splice(idx, 1);
     this.setState({
-      elems: elems
+      sets: this.state.sets
     })
-    storage.save("elems", elems);
+    storage.save("sets", this.state.sets);
   }
 
   toggleElem = idx => {
-    let elems = this.state.elems;
+    let elems = this.getSet().elems;
     elems[idx].selected = !elems[idx].selected
     this.setState({
-      elems: elems
+      sets: this.state.sets
     })
-    storage.save("elems", elems);
+    storage.save("sets", this.state.sets);
   }
 
   shuffle = array => {
@@ -87,7 +109,7 @@ class App extends Component {
     if (isNaN(this.state.groupSize) || this.state.groupSize <= 0) {
       return;
     }
-    let elems = [...this.state.elems].filter(e => {
+    let elems = [...this.getSet().elems].filter(e => {
       return e.selected
     });
     let groups = []
@@ -149,14 +171,56 @@ class App extends Component {
     this.setState({ groups: groups, dragging: false })
   }
 
+  showSetsModal = () => {
+    this.setState({
+      setsModalShown: true
+    })
+  }
+
+  hideSetsModal = () => {
+    this.setState({
+      setsModalShown: false,
+      creatingNewSet: false
+    })
+  }
+
+  selectSet = idx => {
+    this.setState({
+      setIdx: idx
+    });
+    storage.save("setIdx", idx);
+  }
+
+  onCreateNewSet = () => {
+    this.setState({
+      creatingNewSet: true,
+      setsModalShown: true
+    })
+  }
+
   render() {
+    const { sets, setIdx, setsModalShown, creatingNewSet } = {...this.state}
     return (<Container fluid>
+      <Row style={{padding: "10px 15px", flexAlign: "end"}}>
+        <Dropdown as={ButtonGroup} style={{marginRight: "15px"}}>
+          <DropdownButton title={this.getSet().name}>
+          {
+            sets.map((s, idx) => (
+              <Dropdown.Item onSelect={() => this.selectSet(idx)} key={idx}>{s.name}</Dropdown.Item>
+            ))
+          }
+          </DropdownButton>
+          <Button onClick={this.onCreateNewSet} style={{fontWeight: "bold"}} variant="outline-primary">+</Button>
+        </Dropdown>
+        <div>
+          <Button size="sm" variant="outline-primary" onClick={this.showSetsModal}>Manage sets</Button>
+        </div>
+      </Row>
       <Row>
         <Col>
           <Form>
             <Form.Row>
               <Form.Group as={Col}>
-                <Form.Label>Add items</Form.Label>
                 <InputGroup>
                   <Form.Control value={this.state.input} onChange={this.handleChange} onKeyPress={this.onInputKeypress} />
                   <InputGroup.Append>
@@ -168,7 +232,7 @@ class App extends Component {
           </Form>
           <ListGroup>
             {
-              this.state.elems.map((e, idx) => {
+              sets[setIdx].elems.map((e, idx) => {
                 return <ListGroup.Item style={{
                   opacity: e.selected ? 1 : 0.5, cursor: "pointer", "paddingTop": "4px", "paddingBottom": "4px"
                 }} key={idx} onClick={() => { this.toggleElem(idx) }}>
@@ -204,6 +268,18 @@ class App extends Component {
           </DragDropContext>
         </Col>
       </Row>
+      {(
+        setsModalShown ?
+        <SetsModal
+          selectSet={this.selectSet}
+          sets={sets}
+          creatingNewSet={creatingNewSet}
+          setIdx={setIdx}
+          show={setsModalShown}
+          onHide={this.hideSetsModal}
+        /> :
+        null
+      )}
     </Container>);
   }
 }
