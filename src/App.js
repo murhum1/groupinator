@@ -15,7 +15,7 @@ class App extends Component {
     super(props);
 
     let elems = storage.load("elems"); // Legacy
-    const sets = storage.load("sets");
+    let sets = storage.load("sets");
 
     // Patch so versions without elem ids work
     if (elems && elems.length && !elems[0].id) {
@@ -37,7 +37,7 @@ class App extends Component {
         {
           "name": "Default set",
           "description": "Default set description",
-          "elems": elems || []
+          "elems": elems.sort(this.compareElems) || []
         }
       ]);
       storage.save("setIdx", 0);
@@ -47,9 +47,14 @@ class App extends Component {
     this.onDragEnd = this.onDragEnd.bind(this);
     this.onDragStart = this.onDragStart.bind(this);
 
+    // Sort elements in case they're jumbled for some reason
+    sets = storage.load("sets");
+    let setIdx = storage.load("setIdx");
+    sets[setIdx].elems = sets[setIdx].elems.sort(this.compareElems);
+
     this.state = {
-      sets: storage.load("sets"),
-      setIdx: storage.load("setIdx"),
+      sets: sets,
+      setIdx: setIdx,
       input: "",
       groupSize: 3,
       groups: [],
@@ -67,9 +72,16 @@ class App extends Component {
     })
   }
 
+  compareElems = (a, b) => {
+    if (a.label < b.label) { return -1 }
+    else if (a.label > b.label) { return 1 }
+    else { return 0 }
+  }
+
   addElem = () => {
-    const elems = this.getSet().elems;
-    elems.push({ id: new Date().getTime().toString(), label: this.state.input, selected: true })
+    let elems = this.getSet().elems;
+    elems.push({ id: new Date().getTime().toString(), label: this.state.input, selected: true });
+    elems.sort(this.compareElems);
     this.setState({
       sets: this.state.sets,
       input: ""
@@ -201,6 +213,7 @@ class App extends Component {
 
   render() {
     const { sets, setIdx, setsModalShown, creatingNewSet } = {...this.state}
+    const numElems = sets[setIdx].elems.length;
     return (<Container fluid>
       <Row style={{padding: "10px 15px", flexAlign: "end"}}>
         <Dropdown>
@@ -233,6 +246,9 @@ class App extends Component {
               </Form.Group>
             </Form.Row>
           </Form>
+          <div>
+            {numElems} {numElems !== 1 ? "entries" : "entry"} listed
+          </div>
           <ListGroup>
             {
               sets[setIdx].elems.map((e, idx) => {
